@@ -713,12 +713,12 @@ function renderSettings() {
   $('#sAuto').onchange = e => { LOCAL.autoExcel = e.target.checked; saveLocal(); e.target.parentElement.classList.toggle('on', e.target.checked); };
   $('#sClose').onchange = e => { LOCAL.closingTime = e.target.value || '21:00'; saveLocal(); toast(t('saved')); };
   $('#sConn').onclick = () => {
-    const txt = $('#sFb').value.trim();
+    const txt = $('#sFb').value.trim() || BUILTIN_FIREBASE;
     try { Sync.parseConfig(txt); } catch { return toast(t('invalidJson')); }
-    LOCAL.fbConfig = txt; LOCAL.shopCode = ($('#sCode').value.trim() || 'genj').toLowerCase(); saveLocal();
+    LOCAL.fbConfig = txt; LOCAL.syncOff = false; LOCAL.shopCode = ($('#sCode').value.trim() || 'genj').toLowerCase(); saveLocal();
     Sync.start(); renderSettings(); toast(t('connecting'));
   };
-  if ($('#sDisc')) $('#sDisc').onclick = () => { LOCAL.fbConfig = ''; saveLocal(); Sync.stop(); Sync.db = null; Sync.setStatus('local'); renderSettings(); };
+  if ($('#sDisc')) $('#sDisc').onclick = () => { LOCAL.fbConfig = ''; LOCAL.syncOff = true; saveLocal(); Sync.stop(); Sync.db = null; Sync.setStatus('local'); renderSettings(); };
   $('#sSyncState').textContent = $('#syncText').textContent;
   $('#sExport').onclick = () => {
     FileOut.saveText(`genj-backup-${dayKey()}.json`, JSON.stringify(Store.state, null, 1), 'application/json');

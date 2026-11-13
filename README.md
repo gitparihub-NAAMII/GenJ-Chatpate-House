@@ -56,7 +56,8 @@ Alert options (sound, vibration, phone notifications, test button) are in **Sett
 ## Offline and multiple phones
 
 - Everything is stored on the phone, so the app keeps working with no internet.
-- To let several waiters / the chef see the same tables live, connect a free **Firebase** project:
+- **Live sync is built in.** The app is pre-connected to the shop's Firebase project (`genj-chatpate-house`, shop code `genj`), so every phone that opens the app or installs the APK shares the same tables, orders, bills and customer QR orders automatically. *Settings → Online sync → Disconnect* turns it off on one phone.
+- To use a different Firebase project instead, set one up like this and paste its config in Settings:
   1. Go to https://console.firebase.google.com → *Add project*.
   2. *Build → Firestore Database → Create database* (start in production mode, pick a nearby region).
   3. In *Firestore → Rules*, paste the rules below and *Publish*.

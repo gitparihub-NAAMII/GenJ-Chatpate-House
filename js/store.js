@@ -34,7 +34,20 @@ function readJSON(key, fallback) {
 }
 function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { console.warn(e); } }
 
+// The shop's own Firebase project, built in so every phone connects to live sync without setup.
+// (A different config can still be pasted in Settings → Online sync; "Disconnect" turns sync off.)
+const BUILTIN_FIREBASE = JSON.stringify({
+  apiKey: 'AIzaSyBGdaL0DIzzUJhxshaXdmk3ama9EbY0nbU',
+  authDomain: 'genj-chatpate-house.firebaseapp.com',
+  projectId: 'genj-chatpate-house',
+  storageBucket: 'genj-chatpate-house.firebasestorage.app',
+  messagingSenderId: '18806519390',
+  appId: '1:18806519390:web:b417e849460378f7b1e6cf',
+}, null, 1);
+
 window.LOCAL = Object.assign({}, DEFAULT_LOCAL, readJSON(LS_LOCAL, {}));
+if (!LOCAL.fbConfig && !LOCAL.syncOff) LOCAL.fbConfig = BUILTIN_FIREBASE;
+if (!LOCAL.shopCode) LOCAL.shopCode = 'genj';
 function saveLocal() { writeJSON(LS_LOCAL, LOCAL); }
 
 // "English/नेपाली" -> label in current language
