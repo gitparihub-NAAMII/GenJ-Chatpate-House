@@ -9,13 +9,17 @@ const Sync = {
   configured() { return !!(LOCAL.fbConfig && LOCAL.shopCode); },
 
   parseConfig(text) {
-    // accepts pure JSON or the JS snippet `const firebaseConfig = {...};`
-    const m = String(text).match(/\{[\s\S]*\}/);
+    // accepts pure JSON, `const firebaseConfig = {...};`, or the whole snippet Firebase shows
+    // (with `import { initializeApp } ...` and comments around it): pick the { } block that has apiKey
+    const src = String(text).replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'])\/\/.*$/gm, '$1');
+    const m = src.match(/\{[^{}]*apiKey[^{}]*\}/);
     if (!m) throw new Error('no object');
     let body = m[0];
-    try { return JSON.parse(body); } catch { }
-    body = body.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*}/g, '}');
-    const cfg = JSON.parse(body);
+    let cfg;
+    try { cfg = JSON.parse(body); } catch {
+      body = body.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":').replace(/'/g, '"').replace(/,\s*}/g, '}');
+      cfg = JSON.parse(body);
+    }
     if (!cfg.apiKey || !cfg.projectId) throw new Error('missing keys');
     return cfg;
   },
