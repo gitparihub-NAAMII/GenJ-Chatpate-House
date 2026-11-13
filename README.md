@@ -82,7 +82,7 @@ js/excel.js           Excel report + file saving
 js/app.js             screens: tables, orders, reports, settings
 sw.js, manifest.json  offline + installable web app
 vendor/               SheetJS (Excel) library, bundled for offline use
-.github/workflows/    builds the Android APK and publishes the web app
+.github/workflows/    builds the Android APK (web app is served by GitHub Pages from main)
 ```
 
 No build step: open `index.html` through any static web server to run it locally.
