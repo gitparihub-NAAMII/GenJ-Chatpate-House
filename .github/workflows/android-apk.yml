@@ -37,11 +37,16 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Allow vibration for order alerts
+      - name: Allow vibration (order alerts) and camera (scan customer order QR)
         working-directory: build/android/app/src/main
         run: |
-          grep -q android.permission.VIBRATE AndroidManifest.xml || \
-            sed -i 's#</manifest>#    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>#' AndroidManifest.xml
+          for p in VIBRATE CAMERA; do
+            grep -q "android.permission.$p" AndroidManifest.xml || \
+              sed -i "s#</manifest>#    <uses-permission android:name=\"android.permission.$p\" />\n</manifest>#" AndroidManifest.xml
+          done
+          grep -q "android.hardware.camera" AndroidManifest.xml || \
+            sed -i 's#</manifest>#    <uses-feature android:name="android.hardware.camera" android:required="false" />\n</manifest>#' AndroidManifest.xml
+          grep -n "uses-" AndroidManifest.xml
 
       - name: Use shop icon
         working-directory: build/android/app/src/main/res

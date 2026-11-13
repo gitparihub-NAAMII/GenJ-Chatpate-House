@@ -51,6 +51,14 @@ The workbook has 5 sheets: **Summary** (total, cash, online, per wallet, discoun
 
 > Sending orders from the customer's phone needs **Online sync** (Firebase, below), because the customer's phone and the waiter's phone have to talk through the internet. Connect sync **before** printing the QR cards (the QR contains the connection details). Without sync, customers can still see the menu and show their order screen to a waiter. Reprint the cards if you change the shop code or the Firebase project; price changes do not need new cards when sync is on.
 
+### Customer has no internet? Order QR hand-off
+Once a customer has opened the menu (it saves itself on their phone), they can build an order **without internet**:
+1. In *Your order* they tap **Show order QR to waiter**. Their phone shows a QR code with the table, their name and every item (add-ons, sugar, notes).
+2. The waiter taps **▦ Scan customer order** (Tables or Orders screen) and points the camera at it. Allow camera access the first time.
+3. The same Accept / Reject popup appears. **Accept** puts the items on that table. Scanning the same QR twice is blocked.
+
+Neither phone needs internet for this. If sending over the internet fails, the customer page suggests the QR automatically.
+
 Alert options (sound, vibration, phone notifications, test button) are in **Settings → Order alerts**. Browsers only allow sound/vibration after the phone has been tapped once since the app was opened, and alerts only arrive while the app is open (it can be in the background).
 
 ## Offline and multiple phones
@@ -97,7 +105,7 @@ js/requests.js        customer orders: alert popup, sound, vibration, accept/rej
 js/customer.js        customer menu page (customer.html)
 customer.html         menu + ordering page opened from the QR code
 sw.js, manifest.json  offline + installable web app
-vendor/               SheetJS (Excel) and QR code libraries, bundled for offline use
+vendor/               SheetJS (Excel), QR code maker and jsQR reader, bundled for offline use
 .github/workflows/    builds the Android APK (web app is served by GitHub Pages from main)
 ```
 

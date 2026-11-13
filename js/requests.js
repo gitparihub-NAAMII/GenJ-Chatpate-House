@@ -58,7 +58,7 @@ const Requests = {
   incoming(r) {
     if (r.status !== 'pending') { this.removed(r.id); return; }
     this.pending[r.id] = r;
-    if (!this.alerted.has(r.id)) {
+    if (!this.alerted.has(r.id) && !r.local) {
       this.alerted.add(r.id);
       Alerts.fire(`🔔 ${t('newCustomerOrder')} — ${t('table')} ${r.tableName}`, `${r.focal}: ${this.summary(r)} · ${rs(r.total)}`, r.id);
     }
@@ -93,6 +93,12 @@ const Requests = {
 
   // claim the request (so two phones never add it twice), then put the items on the table
   async claim(id, status) {
+    const r = this.pending[id];
+    if (r && r.local) {
+      // scanned from a customer's QR: remember it so the same QR can't be added twice
+      LOCAL.scanned = [...(LOCAL.scanned || []), id].slice(-200); saveLocal();
+      return true;
+    }
     if (!Sync.root) return true;
     const ref = Sync.root.collection('requests').doc(id);
     return Sync.db.runTransaction(async tx => {
@@ -136,5 +142,79 @@ const Requests = {
   },
 };
 
-// keep reminding (sound + vibration every 20 s) while a customer order waits
-setInterval(() => { if (Requests.list().length) { Alerts.beep(); Alerts.vibrate(); } }, 20000);
+// keep reminding (sound + vibration every 20 s) while a customer order (from the internet) waits
+setInterval(() => { if (Requests.list().some(r => !r.local)) { Alerts.beep(); Alerts.vibrate(); } }, 20000);
+
+// Camera scanner for the order QR on a customer's phone (works with no internet on either phone)
+const Scanner = {
+  stream: null, timer: 0, detector: null, canvas: null, lastMsg: 0,
+
+  async open() {
+    $('#modalCard').innerHTML = `
+      <h3 style="margin-top:0">▦ ${t('scanOrder')}</h3>
+      <p class="muted" style="margin-top:0;font-size:.85rem">${t('scanHelp')}</p>
+      <div class="scan-box"><video id="scanVideo" playsinline muted></video><div class="scan-frame"></div></div>
+      <p id="scanMsg" class="muted" style="min-height:1.2em;text-align:center"></p>
+      <div class="row" style="justify-content:flex-end"><button class="btn" id="scanClose">${t('close')}</button></div>`;
+    $('#scanClose').onclick = closeModal;
+    openModal();
+    const msg = s => { const el = $('#scanMsg'); if (el) el.textContent = s; };
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msg(t('noCamera')); return; }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    } catch (e) { console.warn(e); msg(t('noCamera')); return; }
+    const v = $('#scanVideo');
+    if (!v) { this.stop(); return; }   // closed while asking for permission
+    v.srcObject = this.stream;
+    try { await v.play(); } catch { }
+    try {
+      if ('BarcodeDetector' in window && (await BarcodeDetector.getSupportedFormats()).includes('qr_code')) this.detector = new BarcodeDetector({ formats: ['qr_code'] });
+    } catch { this.detector = null; }
+    this.canvas = this.canvas || document.createElement('canvas');
+    this.tick();
+  },
+
+  async tick() {
+    if (!this.stream) return;
+    const v = $('#scanVideo');
+    let text = null;
+    if (v && v.readyState >= 2 && v.videoWidth) {
+      try {
+        if (this.detector) {
+          const codes = await this.detector.detect(v);
+          if (codes.length) text = codes[0].rawValue;
+        } else if (window.jsQR) {
+          const scale = Math.min(1, 640 / v.videoWidth);
+          const w = Math.round(v.videoWidth * scale), h = Math.round(v.videoHeight * scale);
+          this.canvas.width = w; this.canvas.height = h;
+          const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(v, 0, 0, w, h);
+          const code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+          if (code) text = code.data;
+        }
+      } catch (e) { console.warn(e); }
+    }
+    if (text && this.handle(text)) return;
+    this.timer = setTimeout(() => this.tick(), 150);
+  },
+
+  // returns true when a valid order was found (stops scanning)
+  handle(text) {
+    const r = OrderQR.decode(text, Store.menu);
+    if (!r) {
+      if (Date.now() - this.lastMsg > 1500) { this.lastMsg = Date.now(); const el = $('#scanMsg'); if (el) el.textContent = t('notOrderQR'); }
+      return false;
+    }
+    closeModal();
+    if (navigator.vibrate) navigator.vibrate(120);
+    if ((LOCAL.scanned || []).includes(r.id) || Requests.pending[r.id]) { toast(t('alreadyAdded')); return true; }
+    Requests.incoming(r);   // shows the same Accept / Reject popup as an online order
+    return true;
+  },
+
+  stop() {
+    clearTimeout(this.timer);
+    if (this.stream) this.stream.getTracks().forEach(tr => tr.stop());
+    this.stream = null;
+  },
+};

@@ -64,6 +64,12 @@ const I18N = {
     custOrders: 'Customer orders (QR)', orderAdded: 'Customer order added to table',
     alerts: 'Order alerts', testAlert: 'Test alert', enableNotif: 'Allow phone notifications',
     notifOn: 'Notifications allowed', soundOn: 'Sound', vibrateOn: 'Vibrate', takenByOther: 'Already handled on another phone',
+    showQR: 'Show order QR to waiter', qrOrderTitle: 'Show this to the waiter',
+    qrOrderHelp: 'The waiter scans this code with the GenJ app. No internet needed.',
+    doneClear: 'Done — clear my order', noNetHint: 'No internet? Use “Show order QR to waiter”.',
+    scanOrder: 'Scan customer order', scanHelp: 'Point the camera at the order QR on the customer’s phone.',
+    noCamera: 'Camera not available. Allow camera access for this app and try again.',
+    qrShown: 'Order QR shown to waiter', notOrderQR: 'This QR is not a GenJ order', alreadyAdded: 'This order was already added',
   },
   ne: {
     shopName: 'जेनजे चटपटे पसल',
@@ -127,6 +133,12 @@ const I18N = {
     custOrders: 'ग्राहक अर्डर (QR)', orderAdded: 'ग्राहकको अर्डर टेबलमा थपियो',
     alerts: 'अर्डर सूचना', testAlert: 'सूचना परीक्षण', enableNotif: 'फोन सूचना अनुमति',
     notifOn: 'सूचना अनुमति छ', soundOn: 'आवाज', vibrateOn: 'कम्पन', takenByOther: 'अर्को फोनबाट पहिले नै गरियो',
+    showQR: 'अर्डर QR वेटरलाई देखाउनुहोस्', qrOrderTitle: 'यो वेटरलाई देखाउनुहोस्',
+    qrOrderHelp: 'वेटरले GenJ एपबाट यो कोड स्क्यान गर्छन्। इन्टरनेट चाहिँदैन।',
+    doneClear: 'भयो — मेरो अर्डर खाली गर्नुहोस्', noNetHint: 'इन्टरनेट छैन? “अर्डर QR वेटरलाई देखाउनुहोस्” थिच्नुहोस्।',
+    scanOrder: 'ग्राहकको अर्डर स्क्यान', scanHelp: 'ग्राहकको फोनमा भएको अर्डर QR तिर क्यामेरा देखाउनुहोस्।',
+    noCamera: 'क्यामेरा चलेन। यो एपलाई क्यामेरा अनुमति दिएर फेरि प्रयास गर्नुहोस्।',
+    qrShown: 'अर्डर QR वेटरलाई देखाइयो', notOrderQR: 'यो GenJ अर्डरको QR होइन', alreadyAdded: 'यो अर्डर पहिले नै थपिसकियो',
   },
 };
 

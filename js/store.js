@@ -183,6 +183,44 @@ const ShareLink = {
   },
 };
 
+// Offline order hand-off: the customer's phone shows the order as a QR code, the waiter's app scans it.
+// Text format: GJO1.<base64url JSON>  (kept short so the QR stays easy to scan)
+const SUGARS = ['', 'withSugar', 'lessSugar', 'noSugar'];
+const OrderQR = {
+  PREFIX: 'GJO1.',
+  encode(o) {
+    const p = {
+      i: o.id, t: String(o.table).replace(/^t/, ''), n: o.focal, a: Math.round(o.at / 1000),
+      l: o.items.map(x => {
+        const row = [x.itemId, x.qty, SUGARS.indexOf(x.sugar || ''), (x.addons || []).map(a => a.split('/')[0].trim()).join('|'), x.note || '', x.price, x.name];
+        while (row.length > 2 && (row[row.length - 1] === '' || row[row.length - 1] === 0)) row.pop();
+        return row;
+      }),
+    };
+    return this.PREFIX + ShareLink.b64e(JSON.stringify(p));
+  },
+  // returns a request-shaped object, using this phone's menu for names / add-on labels / prices
+  decode(text, menu) {
+    if (!String(text).startsWith(this.PREFIX)) return null;
+    let p;
+    try { p = JSON.parse(ShareLink.b64d(text.slice(this.PREFIX.length))); } catch { return null; }
+    if (!p || !p.i || !Array.isArray(p.l)) return null;
+    const items = p.l.map(([id, qty, s, ads, note, price, name]) => {
+      const m = menu.find(x => x.id === id);
+      const full = m ? addonList(m) : [];
+      return {
+        itemId: id, name: m ? m.en : (name || id), ne: m ? m.ne : '', price: m ? m.price : (+price || 0), qty: +qty || 1,
+        sugar: SUGARS[s || 0] || '', addons: String(ads || '').split('|').filter(Boolean).map(a => full.find(f => f.split('/')[0].trim() === a) || a),
+        note: note || '',
+      };
+    });
+    return {
+      id: 'qr-' + p.i, local: true, status: 'pending', at: (p.a || 0) * 1000 || Date.now(), date: dayKey(),
+      table: 't' + p.t, tableName: String(p.t), focal: p.n || '', items, total: items.reduce((s, x) => s + x.price * x.qty, 0),
+    };
+  },
+};
+
 function lineTotal(o) { return o.price * o.qty; }
 function tableTotal(tb) { return tb.orders.reduce((s, o) => s + lineTotal(o), 0); }
 function tableCount(tb) { return tb.orders.reduce((s, o) => s + o.qty, 0); }

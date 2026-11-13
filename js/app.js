@@ -100,7 +100,10 @@ function renderTables() {
         <span><i style="background:var(--info)"></i>${t('ready')}</span>
         <span><i style="background:var(--brand)"></i>${t('chair')} + ${t('orders')}</span>
       </div>
-      <button class="btn small" id="qrQuick">📱 ${t('qrMenu')}</button>
+      <div class="row">
+        <button class="btn small" id="scanQuick">▦ ${t('scanOrder')}</button>
+        <button class="btn small" id="qrQuick">📱 ${t('qrMenu')}</button>
+      </div>
     </div>
     <div class="floor">
       ${list.map(tb => `
@@ -111,6 +114,7 @@ function renderTables() {
         </div>`).join('')}
     </div>`;
   $('#qrQuick').onclick = openQR;
+  $('#scanQuick').onclick = () => Scanner.open();
   $$('.table-card', el).forEach(c => {
     c.onclick = () => openTable(c.dataset.id);
     c.onkeydown = e => { if (e.key === 'Enter') openTable(c.dataset.id); };
@@ -361,7 +365,7 @@ function cancelAll(tid) {
 
 // ---------- modal helpers ----------
 function openModal() { $('#modal').classList.remove('hidden'); }
-function closeModal() { $('#modal').classList.add('hidden'); $('#modalCard').innerHTML = ''; }
+function closeModal() { Scanner.stop(); $('#modal').classList.add('hidden'); $('#modalCard').innerHTML = ''; }
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
@@ -492,6 +496,7 @@ function renderKitchen() {
   el.innerHTML = `
     <div class="section-head">
       <h2>${t('kitchenTitle')}</h2>
+      <button class="btn small" id="scanK">▦ ${t('scanOrder')}</button>
       <div class="seg">
         <button data-f="active" class="${kitchenFilter === 'active' ? 'on' : ''}">${t('st_new')} + ${t('st_cooking')}</button>
         <button data-f="all" class="${kitchenFilter === 'all' ? 'on' : ''}">★</button>
@@ -506,6 +511,7 @@ function renderKitchen() {
           <button class="btn small ok" data-acc="${r.id}">✔ ${t('accept')}</button></div>
       </div>`).join('')}</div>` : ''}
     ${cards.trim() ? `<div class="k-grid">${cards}</div>` : `<div class="card muted">${t('noActive')}</div>`}`;
+  $('#scanK').onclick = () => Scanner.open();
   $$('[data-acc]', el).forEach(b => b.onclick = () => Requests.accept(b.dataset.acc));
   $$('[data-rej]', el).forEach(b => b.onclick = () => Requests.reject(b.dataset.rej));
   $$('[data-f]', el).forEach(b => b.onclick = () => { kitchenFilter = b.dataset.f; renderKitchen(); });

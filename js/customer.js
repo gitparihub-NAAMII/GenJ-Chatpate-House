@@ -116,7 +116,7 @@ function myOrdersHTML() {
     ${recent.map(r => {
       const st = C.statuses[r.id] || r.status || 'pending';
       const cls = st === 'accepted' ? 'served' : st === 'rejected' ? 'danger' : 'new';
-      const msg = st === 'accepted' ? t('orderAccepted') : st === 'rejected' ? t('orderRejected') : t('orderSent');
+      const msg = st === 'accepted' ? t('orderAccepted') : st === 'rejected' ? t('orderRejected') : st === 'qr' ? t('qrShown') : t('orderSent');
       return `<div class="k-line"><div class="info"><b>${t('table')} ${esc(num(r.tableName))} · ${hhmm(r.at)}</b>
         <div class="opt">${r.items.map(i => esc(LOCAL.lang === 'ne' && i.ne ? i.ne : i.name) + ' ×' + num(i.qty)).join(', ')} · ${rs(r.total)}</div></div>
         <span class="pill ${cls}">${msg}</span></div>`;
@@ -184,11 +184,13 @@ function openCart() {
           <div class="lt">${rs(l.price * l.qty)}</div>
         </div>`).join('')}
       <div class="row" style="justify-content:space-between;margin:10px 0;font-size:1.1rem"><b>${t('total')}</b><b>${rs(cartTotal())}</b></div>
-      ${C.online ? '' : `<p class="muted" style="font-size:.85rem">${t('showWaiter')}</p>`}
+      ${canSend() ? '' : `<p class="muted" style="font-size:.85rem">${t('showWaiter')}</p>`}
       <div class="row" style="justify-content:flex-end">
         <button class="btn" id="cClose">${t('close')}</button>
-        ${C.online ? `<button class="btn primary" id="cSend">📨 ${t('placeOrder')}</button>` : ''}
+        <button class="btn ${canSend() ? '' : 'primary'}" id="cQR">▦ ${t('showQR')}</button>
+        ${canSend() ? `<button class="btn primary" id="cSend">📨 ${t('placeOrder')}</button>` : ''}
       </div>`;
+    $('#cQR').onclick = showOrderQR;
     $$('#modalCard [data-q]').forEach(b => b.onclick = () => {
       const l = saved.cart.find(x => x.id === b.closest('[data-l]').dataset.l);
       l.qty += +b.dataset.q;
@@ -201,17 +203,53 @@ function openCart() {
   draw(); openModal();
 }
 
-async function send() {
+const canSend = () => C.online && navigator.onLine;
+
+// table + name are needed for both sending and the order QR
+function readyToOrder() {
   saved.name = ($('#cName') && $('#cName').value.trim()) || saved.name || '';
-  if (!saved.table) { toast(t('needTable')); closeModal(); return; }
-  if (!saved.name) { toast(t('needName')); closeModal(); $('#cName').focus(); return; }
-  const btn = $('#cSend'); btn.disabled = true;
+  saveCust();
+  if (!saved.table) { toast(t('needTable')); closeModal(); return false; }
+  if (!saved.name) { toast(t('needName')); closeModal(); $('#cName').focus(); return false; }
+  return true;
+}
+function buildRequest() {
   const tb = C.tables['t' + saved.table];
-  const req = {
+  return {
     id: uid(), date: dayKey(), at: Date.now(), status: 'pending',
     table: 't' + saved.table, tableName: tb && tb.name ? tb.name : String(saved.table),
     focal: saved.name, items: saved.cart, total: cartTotal(),
   };
+}
+
+// No internet: show the order as a QR code that the waiter's app scans
+function showOrderQR() {
+  if (!readyToOrder()) return;
+  const req = buildRequest();
+  const qr = qrcode(0, 'L');
+  qr.addData(OrderQR.encode(req)); qr.make();
+  $('#modalCard').innerHTML = `
+    <h3 style="margin-top:0;text-align:center">▦ ${t('qrOrderTitle')}</h3>
+    <div style="background:#fff;padding:10px;border-radius:12px;max-width:300px;margin:0 auto">
+      <img src="${qr.createDataURL(6, 2)}" alt="QR" style="width:100%;display:block;image-rendering:pixelated">
+    </div>
+    <p style="text-align:center;margin:10px 0 4px"><b>${t('table')} ${esc(num(req.tableName))} · ${esc(req.focal)}</b> · ${rs(req.total)}</p>
+    <p class="muted" style="text-align:center;font-size:.85rem;margin:0 0 12px">${t('qrOrderHelp')}</p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn" id="qBack">${t('close')}</button>
+      <button class="btn ok" id="qDone">✔ ${t('doneClear')}</button>
+    </div>`;
+  $('#qBack').onclick = openCart;
+  $('#qDone').onclick = () => {
+    saved.mine.push({ id: req.id, at: req.at, tableName: req.tableName, items: req.items, total: req.total, status: 'qr' });
+    saved.cart = []; saveCust(); closeModal(); render(); window.scrollTo(0, 0);
+  };
+}
+
+async function send() {
+  if (!readyToOrder()) return;
+  const btn = $('#cSend'); btn.disabled = true;
+  const req = buildRequest();
   try {
     await Promise.race([
       C.root.collection('requests').doc(req.id).set(JSON.parse(JSON.stringify(req))),
@@ -223,7 +261,8 @@ async function send() {
     window.scrollTo(0, 0);
     toast(t('orderSent'));
   } catch (e) {
-    console.warn(e); btn.disabled = false; toast(t('sendFailed'));
+    console.warn(e); btn.disabled = false; toast(t('sendFailed') + ' ' + t('noNetHint'));
+    btn.classList.remove('primary'); $('#cQR').classList.add('primary');
   }
 }
 
