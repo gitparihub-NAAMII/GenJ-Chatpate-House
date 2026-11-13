@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GenJ ChatPate Shop</title>
+  <meta name="description" content="Order taking, table billing and daily reports for GenJ ChatPate Shop">
+  <meta name="theme-color" content="#e8551f">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" class="logo">
+      <div>
+        <h1 data-t="shopName">GenJ ChatPate Shop</h1>
+        <div class="sub"><span id="syncDot" class="dot"></span><span id="syncText"></span><span id="clock"></span></div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="installBtn" class="chip hidden" data-t="install">Install app</button>
+      <button id="langBtn" class="icon-btn" title="Language">ने</button>
+      <button id="themeBtn" class="icon-btn" title="Theme">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-tables" class="view active"></section>
+    <section id="view-kitchen" class="view"></section>
+    <section id="view-reports" class="view"></section>
+    <section id="view-settings" class="view"></section>
+  </main>
+
+  <nav class="bottomnav">
+    <button data-view="tables" class="active"><span class="ni">◯</span><span data-t="tables">Tables</span></button>
+    <button data-view="kitchen"><span class="ni">☰</span><span data-t="kitchen">Orders</span><b id="kitchenBadge" class="badge hidden"></b></button>
+    <button data-view="reports"><span class="ni">▤</span><span data-t="reports">Reports</span></button>
+    <button data-view="settings"><span class="ni">⚙</span><span data-t="settings">Settings</span></button>
+  </nav>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+  <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true">
+    <div class="sheet-card" id="sheetCard"></div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="printArea"></div>
+
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
