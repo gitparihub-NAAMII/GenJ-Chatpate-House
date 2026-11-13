@@ -52,7 +52,7 @@ function renderAll() {
 }
 
 function updateBadge() {
-  const n = Store.tableList().reduce((s, tb) => s + tb.orders.filter(o => o.status === 'new').length, 0);
+  const n = Store.tableList().reduce((s, tb) => s + tb.orders.filter(o => o.status === 'new').length, 0) + Requests.list().length;
   const b = $('#kitchenBadge');
   b.textContent = num(n); b.classList.toggle('hidden', !n);
 }
@@ -100,6 +100,7 @@ function renderTables() {
         <span><i style="background:var(--info)"></i>${t('ready')}</span>
         <span><i style="background:var(--brand)"></i>${t('chair')} + ${t('orders')}</span>
       </div>
+      <button class="btn small" id="qrQuick">📱 ${t('qrMenu')}</button>
     </div>
     <div class="floor">
       ${list.map(tb => `
@@ -109,6 +110,7 @@ function renderTables() {
           <div class="amt">${tb.orders.length ? rs(tableTotal(tb)) : '<span class="muted">' + t('free') + '</span>'}</div>
         </div>`).join('')}
     </div>`;
+  $('#qrQuick').onclick = openQR;
   $$('.table-card', el).forEach(c => {
     c.onclick = () => openTable(c.dataset.id);
     c.onkeydown = e => { if (e.key === 'Enter') openTable(c.dataset.id); };
@@ -495,7 +497,17 @@ function renderKitchen() {
         <button data-f="all" class="${kitchenFilter === 'all' ? 'on' : ''}">★</button>
       </div>
     </div>
+    ${Requests.list().length ? `<h3 style="margin:0 0 8px">🔔 ${t('custOrders')}</h3><div class="k-grid" style="margin-bottom:16px">${Requests.list().map(r => `
+      <div class="k-card req-card">
+        <h3><span>${t('table')} ${esc(num(r.tableName))} · 👤 ${esc(r.focal)}</span><span class="muted" style="font-size:.8rem">${ago(r.at)}</span></h3>
+        ${r.items.map(i => `<div class="k-line"><div class="info"><b>${num(i.qty)}× ${esc(LOCAL.lang === 'ne' && i.ne ? i.ne : i.name)}</b>${optText(i) ? `<div class="opt">${esc(optText(i))}</div>` : ''}</div></div>`).join('')}
+        <div class="row" style="margin-top:8px"><b class="grow">${rs(r.total)}</b>
+          <button class="btn small danger" data-rej="${r.id}">✕ ${t('reject')}</button>
+          <button class="btn small ok" data-acc="${r.id}">✔ ${t('accept')}</button></div>
+      </div>`).join('')}</div>` : ''}
     ${cards.trim() ? `<div class="k-grid">${cards}</div>` : `<div class="card muted">${t('noActive')}</div>`}`;
+  $$('[data-acc]', el).forEach(b => b.onclick = () => Requests.accept(b.dataset.acc));
+  $$('[data-rej]', el).forEach(b => b.onclick = () => Requests.reject(b.dataset.rej));
   $$('[data-f]', el).forEach(b => b.onclick = () => { kitchenFilter = b.dataset.f; renderKitchen(); });
   $$('.k-line [data-o]', el).forEach(b => b.onclick = () => orderAction(b.dataset.t, b.dataset.o, 'status'));
 }
@@ -612,6 +624,23 @@ function renderSettings() {
     </div>
 
     <div class="card">
+      <h3>📱 ${t('qrMenu')}</h3>
+      <div id="qrPanel"></div>
+    </div>
+
+    <div class="card">
+      <h3>🔔 ${t('alerts')}</h3>
+      <div class="opts">
+        <label class="opt-box ${LOCAL.alertSound !== false ? 'on' : ''}"><input type="checkbox" id="sSound" ${LOCAL.alertSound !== false ? 'checked' : ''}>🔊 ${t('soundOn')}</label>
+        <label class="opt-box ${LOCAL.alertVibrate !== false ? 'on' : ''}"><input type="checkbox" id="sVib" ${LOCAL.alertVibrate !== false ? 'checked' : ''}>📳 ${t('vibrateOn')}</label>
+      </div>
+      <div class="row">
+        <button class="btn" id="sNotif">${'Notification' in window && Notification.permission === 'granted' ? '✓ ' + t('notifOn') : '🔔 ' + t('enableNotif')}</button>
+        <button class="btn" id="sTestAlert">▶ ${t('testAlert')}</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h3>📊 Excel</h3>
       <label class="opt-box ${LOCAL.autoExcel ? 'on' : ''}" style="margin-bottom:10px"><input type="checkbox" id="sAuto" ${LOCAL.autoExcel ? 'checked' : ''}>${t('autoExcel')}</label>
       <label class="field">${t('closingTime')}<input id="sClose" type="time" value="${LOCAL.closingTime}"></label>
@@ -673,6 +702,14 @@ function renderSettings() {
     });
     toast(t('saved'));
   };
+  renderQRPanel($('#qrPanel'));
+  $('#sSound').onchange = e => { LOCAL.alertSound = e.target.checked; saveLocal(); e.target.parentElement.classList.toggle('on', e.target.checked); };
+  $('#sVib').onchange = e => { LOCAL.alertVibrate = e.target.checked; saveLocal(); e.target.parentElement.classList.toggle('on', e.target.checked); };
+  $('#sNotif').onclick = async () => { await Alerts.askPermission(); renderSettings(); };
+  $('#sTestAlert').onclick = () => {
+    Alerts.fire('🔔 ' + t('newCustomerOrder'), t('testAlert'), 'test');
+    Alerts.notify('🔔 ' + t('newCustomerOrder'), t('testAlert'), 'test');
+  };
   $('#sAuto').onchange = e => { LOCAL.autoExcel = e.target.checked; saveLocal(); e.target.parentElement.classList.toggle('on', e.target.checked); };
   $('#sClose').onchange = e => { LOCAL.closingTime = e.target.value || '21:00'; saveLocal(); toast(t('saved')); };
   $('#sConn').onclick = () => {
@@ -701,6 +738,53 @@ function renderSettings() {
   $('#sReset').onclick = () => confirmBox(t('confirmReset'), false, () => {
     Store.tableList().forEach(tb => { if (tb.orders.length || tb.focal) Store.updateTable(tb.id, x => { x.orders = []; x.focal = ''; x.openedAt = 0; }); });
   });
+}
+
+// ---------- customer QR menu ----------
+function qrImg(text, cell = 4) {
+  const qr = qrcode(0, 'M');
+  qr.addData(text); qr.make();
+  return qr.createDataURL(cell, 2);
+}
+function renderQRPanel(box) {
+  const url = ShareLink.build();
+  box.innerHTML = `
+    <p class="muted" style="font-size:.85rem;margin-top:0">${t('qrHelp')}</p>
+    ${LOCAL.fbConfig ? '' : `<p style="font-size:.85rem;margin-top:0;color:var(--warn)">⚠ ${t('qrNoSync')}</p>`}
+    <div class="qr-box">
+      <div class="qr"><img src="${qrImg(url)}" alt="QR"></div>
+      <div class="grow" style="min-width:160px">
+        <b>${t('qrGeneral')}</b>
+        <div class="row" style="margin-top:8px">
+          <button class="btn small" id="qrCopy">📋 ${t('copyLink')}</button>
+          <a class="btn small" href="${esc(url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">↗ ${t('openLink')}</a>
+        </div>
+        <button class="btn primary" id="qrPrint" style="margin-top:8px;width:100%">🖨 ${t('printQR')}</button>
+      </div>
+    </div>`;
+  $('#qrCopy', box).onclick = async () => {
+    try { await navigator.clipboard.writeText(url); toast(t('copied')); }
+    catch { prompt(t('copyLink'), url); }
+  };
+  $('#qrPrint', box).onclick = printQRCards;
+}
+function openQR() {
+  $('#modalCard').innerHTML = `<h3 style="margin-top:0">📱 ${t('qrMenu')}</h3><div id="qrModal"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" id="qrClose">${t('close')}</button></div>`;
+  renderQRPanel($('#qrModal'));
+  $('#qrClose').onclick = closeModal;
+  openModal();
+}
+function printQRCards() {
+  const cards = Store.tableList().map(tb => `
+    <div class="qr-card">
+      <h4>${esc(I18N.en.shopName)}</h4>
+      <div class="tno">${esc(I18N.en.table)} ${esc(tb.name)} · ${esc(I18N.ne.table)} ${esc(tb.name)}</div>
+      <img src="${qrImg(ShareLink.build(tb.id.slice(1)), 5)}" alt="QR">
+      <p><b>${esc(I18N.en.scanToOrder)}</b><br>${esc(I18N.ne.scanToOrder)}</p>
+    </div>`).join('');
+  $('#printArea').innerHTML = `<div class="qr-sheet">${cards}</div>`;
+  window.print();
 }
 
 // ---------- install (Android "Add to Home screen") ----------

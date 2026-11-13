@@ -41,6 +41,18 @@ With *Settings → Auto-download daily Excel* on, the day's sheet `GenJ-ChatPate
 
 The workbook has 5 sheets: **Summary** (total, cash, online, per wallet, discounts, cancellations), **Bills**, **Order lines**, **Item sales**, **Cancelled**.
 
+## Customer QR menu (customers order from their own phone)
+
+1. In the app tap **📱 Customer QR menu** (Tables screen) or go to **Settings → Customer QR menu**.
+2. Show the general QR on the counter, or tap **Print QR cards for all tables** and stick one card on each table. A table card fills in the table number for the customer automatically.
+3. The customer scans the QR with the phone camera. The menu opens in their browser with current prices (English / नेपाली, light / dark). They choose the **table**, type their **name** (the focal person for the table), pick items (with add-ons and sugar options) and tap **Send order**.
+4. Every waiter / chef phone with the app open gets a **popup + alarm sound + vibration** (and a phone notification if the app is in the background and notifications are allowed). The alarm repeats every 20 seconds until someone handles it.
+5. Tap **Accept** → the items are added to that table with the customer as focal person and appear in the Orders list. **Reject** tells the customer to talk to a waiter. Pending customer orders are also listed at the top of the **Orders** tab. The customer's screen shows *waiting / confirmed / rejected* live.
+
+> Sending orders from the customer's phone needs **Online sync** (Firebase, below), because the customer's phone and the waiter's phone have to talk through the internet. Connect sync **before** printing the QR cards (the QR contains the connection details). Without sync, customers can still see the menu and show their order screen to a waiter. Reprint the cards if you change the shop code or the Firebase project; price changes do not need new cards when sync is on.
+
+Alert options (sound, vibration, phone notifications, test button) are in **Settings → Order alerts**. Browsers only allow sound/vibration after the phone has been tapped once since the app was opened, and alerts only arrive while the app is open (it can be in the background).
+
 ## Offline and multiple phones
 
 - Everything is stored on the phone, so the app keeps working with no internet.
@@ -79,9 +91,12 @@ js/i18n.js            English / Nepali text
 js/store.js           data on the phone (localStorage)
 js/sync.js            optional Firebase live sync
 js/excel.js           Excel report + file saving
-js/app.js             screens: tables, orders, reports, settings
+js/app.js             screens: tables, orders, reports, settings, QR codes
+js/requests.js        customer orders: alert popup, sound, vibration, accept/reject
+js/customer.js        customer menu page (customer.html)
+customer.html         menu + ordering page opened from the QR code
 sw.js, manifest.json  offline + installable web app
-vendor/               SheetJS (Excel) library, bundled for offline use
+vendor/               SheetJS (Excel) and QR code libraries, bundled for offline use
 .github/workflows/    builds the Android APK (web app is served by GitHub Pages from main)
 ```
 

@@ -1,9 +1,9 @@
 // Service worker: caches the app so it opens and works with no internet.
-const CACHE = 'genj-v1';
+const CACHE = 'genj-v2';
 const ASSETS = [
-  './', 'index.html', 'manifest.json', 'css/style.css',
-  'js/i18n.js', 'js/store.js', 'js/sync.js', 'js/excel.js', 'js/app.js',
-  'vendor/xlsx.full.min.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
+  './', 'index.html', 'customer.html', 'manifest.json', 'css/style.css',
+  'js/i18n.js', 'js/store.js', 'js/sync.js', 'js/excel.js', 'js/requests.js', 'js/customer.js', 'js/app.js',
+  'vendor/xlsx.full.min.js', 'vendor/qrcode.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
 ];
 
 self.addEventListener('install', e => {
@@ -35,4 +35,13 @@ self.addEventListener('fetch', e => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('index.html'))));
+});
+
+// tapping a "new customer order" notification opens the app
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const win = list.find(c => !c.url.includes('customer.html'));
+    return win ? win.focus() : self.clients.openWindow('./');
+  }));
 });

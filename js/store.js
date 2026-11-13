@@ -129,6 +129,47 @@ const Store = {
 
 Store.ensureTables();
 
+// Customer QR link: customer.html#s=<base64url JSON>&t=<table>
+// The JSON holds the shop code + Firebase web config (so customer phones can send orders),
+// or — when sync is off — a small copy of the menu so customers still see current prices.
+const ShareLink = {
+  b64e(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); },
+  b64d(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); },
+  PUBLIC: 'https://gitparihub-naamii.github.io/GenJ-Chatpate-House/',
+  build(tableNo) {
+    // inside the Android app or on a local test server, point customers at the public website
+    const here = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+    const isPublic = location.protocol === 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const base = (isPublic ? here : this.PUBLIC) + 'customer.html';
+    const p = { c: LOCAL.shopCode || 'genj', n: Store.settings.tableCount };
+    if (LOCAL.fbConfig) {
+      try {
+        const f = Sync.parseConfig(LOCAL.fbConfig);
+        p.f = { apiKey: f.apiKey, authDomain: f.authDomain, projectId: f.projectId, appId: f.appId };
+      } catch { }
+    }
+    // built-in items only need [id, price]; new or renamed items are sent in full (keeps the QR small)
+    const same = (a, b) => ['en', 'ne', 'emoji', 'addons', 'cat'].every(k => (a[k] || '') === (b[k] || '')) && !!a.sugar === !!b.sugar && (a.unit || '') === (b.unit || '');
+    if (!p.f) p.m = Store.menu.map(m => {
+      const d = DEFAULT_MENU.find(x => x.id === m.id);
+      return d && same(d, m) ? [m.id, m.price] : [m.id, m.en, m.ne, m.price, m.emoji || '', m.sugar ? 1 : 0, m.addons || '', m.cat, m.unit || ''];
+    });
+    return base + '#s=' + this.b64e(JSON.stringify(p)) + (tableNo ? '&t=' + encodeURIComponent(tableNo) : '');
+  },
+  parse(hash) {
+    const q = new URLSearchParams(String(hash).replace(/^#/, ''));
+    const out = { t: q.get('t') || '' };
+    if (q.get('s')) { try { out.s = JSON.parse(this.b64d(q.get('s'))); } catch { } }
+    return out;
+  },
+  menuFrom(m) {
+    return (m || []).map(a => {
+      if (a.length === 2) { const d = DEFAULT_MENU.find(x => x.id === a[0]); return d ? Object.assign({}, d, { price: a[1] }) : null; }
+      return { id: a[0], en: a[1], ne: a[2], price: a[3], emoji: a[4], sugar: !!a[5], addons: a[6], cat: a[7], unit: a[8] };
+    }).filter(Boolean);
+  },
+};
+
 function lineTotal(o) { return o.price * o.qty; }
 function tableTotal(tb) { return tb.orders.reduce((s, o) => s + lineTotal(o), 0); }
 function tableCount(tb) { return tb.orders.reduce((s, o) => s + o.qty, 0); }

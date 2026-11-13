@@ -79,6 +79,14 @@ const Sync = {
       }
     }));
 
+    // customer orders from the QR menu
+    this.unsubs.push(r.collection('requests').where('status', '==', 'pending').onSnapshot(snap => {
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'removed') Requests.removed(ch.doc.id);
+        else Requests.incoming(ch.doc.data());
+      });
+    }, e => console.warn('requests', e)));
+
     const since = dayKey(Date.now() - 45 * 864e5);
     ['bills', 'cancels'].forEach(kind => {
       let first = true;

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GenJ ChatPate Shop — Menu</title>
+  <meta name="description" content="Menu and table ordering for GenJ ChatPate Shop">
+  <meta name="theme-color" content="#e8551f">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="customer">
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" class="logo">
+      <div>
+        <h1 data-t="shopName">GenJ ChatPate Shop</h1>
+        <div class="sub" data-t="menu">Menu</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="langBtn" class="icon-btn" title="Language">ने</button>
+      <button id="themeBtn" class="icon-btn" title="Theme">◐</button>
+    </div>
+  </header>
+
+  <main id="cMain"></main>
+
+  <div class="cart-bar hidden" id="cartBar">
+    <div class="tot" id="cartTot"></div>
+    <button class="btn primary" id="cartOpen"></button>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card" id="modalCard"></div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/customer.js"></script>
+</body>
+</html>
