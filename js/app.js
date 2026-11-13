@@ -796,7 +796,15 @@ $('#installBtn').onclick = async () => {
   $('#installBtn').classList.add('hidden');
 };
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW', e));
+  navigator.serviceWorker.register('sw.js').then(reg => reg.update()).catch(e => console.warn('SW', e));
+  // when a new version of the app is installed in the background, reload once to start using it
+  let reloaded = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded) return;
+    reloaded = true;
+    if ($('#modal').classList.contains('hidden') && !cur.table) location.reload();
+  });
 }
 
 // ---------- clock & timers ----------

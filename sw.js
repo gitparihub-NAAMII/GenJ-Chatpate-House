@@ -1,5 +1,5 @@
 // Service worker: caches the app so it opens and works with no internet.
-const CACHE = 'genj-v4';
+const CACHE = 'genj-v5';
 const ASSETS = [
   './', 'index.html', 'customer.html', 'manifest.json', 'css/style.css',
   'js/i18n.js', 'js/store.js', 'js/sync.js', 'js/excel.js', 'js/requests.js', 'js/customer.js', 'js/app.js',
@@ -31,7 +31,9 @@ self.addEventListener('fetch', e => {
 
   if (url.origin !== location.origin) return;
   // App files: network first (to get updates), fall back to cache when offline
-  e.respondWith(fetch(req).then(res => {
+  // 'no-cache' makes the browser re-check GitHub every time, so phones never run an old copy while online
+  // (a fresh Request by URL, because page navigations can't be re-fetched with options)
+  e.respondWith(fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('index.html'))));

@@ -22,9 +22,11 @@ saveCust();
 if (location.hash) history.replaceState(null, '', location.pathname); // keep the address bar short
 
 const S = saved.s || {};
+// QR links carry the connection; older cards (or a plain link) fall back to the shop's built-in Firebase
+const FB = S.f || (typeof BUILTIN_FIREBASE !== 'undefined' ? JSON.parse(BUILTIN_FIREBASE) : null);
 const C = {
-  online: !!S.f, root: null,
-  menu: S.f ? [] : (S.m ? ShareLink.menuFrom(S.m) : DEFAULT_MENU),
+  online: !!FB, root: null,
+  menu: S.m ? ShareLink.menuFrom(S.m) : DEFAULT_MENU,  // shown at once; replaced by the live menu when connected
   tableCount: S.n || 6,
   tables: {},          // live occupancy when online
   statuses: {},        // my request id -> status
@@ -246,7 +248,7 @@ async function connect() {
   try {
     await Sync.loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-app-compat.js`);
     await Sync.loadScript(`https://www.gstatic.com/firebasejs/${FB_VER}/firebase-firestore-compat.js`);
-    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(S.f);
+    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB);
     C.root = app.firestore().collection('shops').doc(String(S.c || 'genj').toLowerCase());
     C.root.collection('meta').doc('settings').onSnapshot(d => {
       if (!d.exists) return;
@@ -270,3 +272,4 @@ function closeModal() { $('#modal').classList.add('hidden'); $('#modalCard').inn
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 
 applyTheme(); applyLang(); render(); connect();
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
