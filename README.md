@@ -27,6 +27,21 @@ Available in **English and नेपाली**, with **light and dark** themes.
 
 New items, Nepali names, emojis, categories and add-ons can all be added or edited in Settings.
 
+## Waiter and Cashier roles
+
+The first time the app opens on a phone it asks **Who is using this phone?**
+
+| Role | Can use |
+|---|---|
+| 🧑‍🍳 **Waiter** | Tables, Orders (kitchen list), adding / revising / cancelling orders, bills and payments, customer QR orders, scanning order QRs |
+| 💼 **Cashier** (admin) | Everything above **plus Reports, Excel export and Settings** (prices, menu, tables, sync, alerts, backup) |
+
+- The first person who picks **Cashier** creates a **cashier PIN** (4–8 digits). It is shared by all phones through live sync, so every cashier phone uses the same PIN. Waiters need no PIN.
+- Switch role any time with the role button in the top bar (or *Settings → Switch role*). Changing to Cashier always asks for the PIN.
+- *Settings → Change cashier PIN* sets a new PIN for all phones.
+- The automatic daily Excel download only runs on cashier phones.
+- Forgot the PIN? In the Firebase console open *Firestore → shops → genj → meta → settings*, delete the `cashierPin` field, and the next cashier creates a new one.
+
 ## How to use
 
 1. **Tables** — every table is drawn as a circle with its chairs around it. Free tables are plain, occupied tables have an amber border, tables where everything is served have a blue border. Chairs turn orange and show `×n` when someone in that chair has ordered.

@@ -63,7 +63,8 @@ button { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
 }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.brand > div { min-width: 0; }
 .logo { width: 40px; height: 40px; border-radius: 12px; }
 .brand h1 { margin: 0; font-size: 1.05rem; color: var(--brand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sub { font-size: .75rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
@@ -252,6 +253,23 @@ table.list th { color: var(--muted); font-weight: 600; }
   transition: .25s; z-index: 80; pointer-events: none; max-width: calc(100% - 32px); text-align: center;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Role picker */
+.role-chip { border-color: var(--border); color: var(--text); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.role-opt {
+  display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; margin-bottom: 10px;
+  border: 2px solid var(--border); background: var(--surface-2); border-radius: 14px; padding: 14px; min-height: 72px;
+}
+.role-opt:hover, .role-opt:focus-visible { border-color: var(--brand); }
+.role-opt .ri { font-size: 2rem; }
+.role-opt b { display: block; font-size: 1.05rem; }
+.role-opt small { color: var(--muted); }
+.sub { white-space: nowrap; overflow: hidden; }
+@media (max-width: 420px) {
+  .role-chip { max-width: 92px; padding: 6px 8px; }
+  #clock { display: none; }
+  .topbar { padding: 10px 12px; }
+}
 
 /* Customer page */
 body.customer { padding-bottom: 90px; }

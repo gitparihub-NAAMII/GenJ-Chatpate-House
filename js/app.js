@@ -27,6 +27,7 @@ function applyLang() {
   $$('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   document.title = t('shopName');
   Sync.setStatus();
+  if (typeof ROLE_VIEWS !== 'undefined') applyRole();
 }
 $('#themeBtn').onclick = () => { LOCAL.theme = LOCAL.theme === 'dark' ? 'light' : 'dark'; saveLocal(); applyTheme(); };
 $('#langBtn').onclick = () => { LOCAL.lang = LOCAL.lang === 'ne' ? 'en' : 'ne'; saveLocal(); applyLang(); renderAll(); };
@@ -34,6 +35,7 @@ $('#langBtn').onclick = () => { LOCAL.lang = LOCAL.lang === 'ne' ? 'en' : 'ne'; 
 // ---------- navigation ----------
 $$('.bottomnav button').forEach(b => b.onclick = () => showView(b.dataset.view));
 function showView(v) {
+  if (!canSee(v)) v = 'tables';
   currentView = v;
   $$('.bottomnav button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   $$('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
@@ -585,6 +587,10 @@ function renderSettings() {
       <h3>${t('general')}</h3>
       <label class="field">${t('waiterName')}<input id="sWaiter" value="${esc(LOCAL.waiter)}"></label>
       <div class="row" style="margin-bottom:10px">
+        <button class="btn" id="sRole">🔁 ${t('switchRole')}</button>
+        <button class="btn" id="sPin">🔑 ${t('changePin')}</button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
         <span class="muted grow">${t('language')}</span>
         <div class="seg"><button data-l="en" class="${LOCAL.lang === 'en' ? 'on' : ''}">English</button><button data-l="ne" class="${LOCAL.lang === 'ne' ? 'on' : ''}">नेपाली</button></div>
       </div>
@@ -674,7 +680,32 @@ function renderSettings() {
     </div>
     <p class="muted" style="text-align:center;font-size:.75rem">${esc(t('shopName'))} · v1.0</p>`;
 
-  $('#sWaiter').onchange = e => { LOCAL.waiter = e.target.value.trim(); saveLocal(); toast(t('saved')); };
+  $('#sWaiter').onchange = e => { LOCAL.waiter = e.target.value.trim(); saveLocal(); applyRole(); toast(t('saved')); };
+  $('#sRole').onclick = () => openRolePicker(false);
+  $('#sPin').onclick = () => {
+    const draw = (err = '') => {
+      $('#modalCard').innerHTML = `
+        <h3 style="margin-top:0">🔑 ${t('changePin')}</h3>
+        <label class="field">${t('newPin')}<input id="cp1" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+        <label class="field">${t('confirmPin')}<input id="cp2" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+        <p style="color:var(--danger);min-height:1.2em;margin:0 0 8px">${esc(err)}</p>
+        <div class="row" style="justify-content:flex-end">
+          <button class="btn" id="cpNo">${t('cancel')}</button>
+          <button class="btn primary" id="cpOk">${t('save')}</button>
+        </div>`;
+      $('#cp1').focus();
+      $('#cpNo').onclick = closeModal;
+      $('#cpOk').onclick = async () => {
+        const a = $('#cp1').value.trim(), b = $('#cp2').value.trim();
+        if (!pinOk(a)) return draw(t('pinShort'));
+        if (a !== b) return draw(t('pinMismatch'));
+        const h = await pinHash(a);
+        Store.setSettings(s => { s.cashierPin = h; });
+        closeModal(); toast(t('pinChanged'));
+      };
+    };
+    draw(); openModal();
+  };
   $$('[data-l]', el).forEach(b => b.onclick = () => { LOCAL.lang = b.dataset.l; saveLocal(); applyLang(); renderAll(); });
   $$('[data-th]', el).forEach(b => b.onclick = () => { LOCAL.theme = b.dataset.th; saveLocal(); applyTheme(); renderSettings(); });
 
@@ -821,11 +852,102 @@ function tick() {
 setInterval(tick, 30000);
 setInterval(() => Excel.autoCheck(), 60000);
 
+// ---------- roles: Waiter / Cashier ----------
+// Waiter: tables, orders, bills, customer QR. Cashier (admin): everything, incl. reports + settings.
+var ROLE_VIEWS = { waiter: ['tables', 'kitchen'], cashier: ['tables', 'kitchen', 'reports', 'settings'] };
+function canSee(view) { return (ROLE_VIEWS[LOCAL.role] || ROLE_VIEWS.waiter).includes(view); }
+
+async function pinHash(pin) {
+  const data = new TextEncoder().encode('genj-pin:' + pin);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const pinOk = p => /^\d{4,8}$/.test(p);
+
+function applyRole() {
+  const allowed = ROLE_VIEWS[LOCAL.role] || ROLE_VIEWS.waiter;
+  $$('.bottomnav button').forEach(b => b.classList.toggle('hidden', !allowed.includes(b.dataset.view)));
+  $('.bottomnav').style.gridTemplateColumns = `repeat(${allowed.length}, 1fr)`;
+  $('#roleBtn').textContent = (LOCAL.role === 'cashier' ? '💼 ' + t('cashier') : '🧑‍🍳 ' + t('waiter')) + (LOCAL.waiter ? ' · ' + LOCAL.waiter : '');
+  if (!canSee(currentView)) showView('tables');
+}
+
+function setRole(role) {
+  LOCAL.role = role; saveLocal();
+  $('#rolePick').classList.add('hidden');
+  applyRole(); renderAll();
+  toast((role === 'cashier' ? '💼 ' + t('cashier') : '🧑‍🍳 ' + t('waiter')) + ' ✓');
+  if (role === 'cashier') Excel.autoCheck();
+}
+
+// Full-screen picker shown on first open, and from the role button in the top bar
+function openRolePicker(firstRun = false) {
+  const box = $('#rolePick');
+  const draw = (step = 'choose', err = '') => {
+    if (step === 'choose') {
+      $('#rolePickCard').innerHTML = `
+        <img src="icons/icon-192.png" alt="" style="width:64px;height:64px;border-radius:16px;display:block;margin:0 auto 8px">
+        <h2 style="text-align:center;margin:0 0 4px">${t('shopName')}</h2>
+        <p class="muted" style="text-align:center;margin:0 0 14px">${t('chooseRole')}</p>
+        <label class="field">${t('yourNameOpt')}<input id="rpName" value="${esc(LOCAL.waiter)}" autocomplete="name"></label>
+        <button class="role-opt" data-role="waiter"><span class="ri">🧑‍🍳</span><span><b>${t('waiter')}</b><small>${t('waiterDesc')}</small></span></button>
+        <button class="role-opt" data-role="cashier"><span class="ri">💼</span><span><b>${t('cashier')}</b><small>${t('cashierDesc')}</small></span></button>
+        <div class="row" style="justify-content:space-between;margin-top:6px">
+          <div class="seg"><button data-l="en" class="${LOCAL.lang === 'en' ? 'on' : ''}">English</button><button data-l="ne" class="${LOCAL.lang === 'ne' ? 'on' : ''}">नेपाली</button></div>
+          ${firstRun ? '' : `<button class="btn" id="rpCancel">${t('close')}</button>`}
+        </div>`;
+      $$('#rolePickCard [data-l]').forEach(b => b.onclick = () => { LOCAL.lang = b.dataset.l; saveLocal(); applyLang(); renderAll(); draw(); });
+      if ($('#rpCancel')) $('#rpCancel').onclick = () => box.classList.add('hidden');
+      $$('#rolePickCard [data-role]').forEach(b => b.onclick = () => {
+        LOCAL.waiter = $('#rpName').value.trim(); saveLocal();
+        if (b.dataset.role === 'waiter') return setRole('waiter');
+        if (LOCAL.role === 'cashier') return setRole('cashier');
+        // no PIN known yet: if this phone is still loading the shop's settings, wait instead of creating a second PIN
+        if (!Store.settings.cashierPin && Sync.configured() && navigator.onLine && !Sync.gotServerSettings) return draw('choose', ''), toast(t('waitSync'));
+        draw(Store.settings.cashierPin ? 'pin' : 'create');
+      });
+      return;
+    }
+    const create = step === 'create';
+    $('#rolePickCard').innerHTML = `
+      <h2 style="margin:0 0 6px">💼 ${t('cashier')}</h2>
+      <p class="muted" style="margin:0 0 12px;font-size:.9rem">${create ? t('createPin') : t('enterPin')}</p>
+      <label class="field">${t('enterPin')}<input id="rpPin" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+      ${create ? `<label class="field">${t('confirmPin')}<input id="rpPin2" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>` : ''}
+      <p style="color:var(--danger);min-height:1.2em;margin:0 0 8px">${esc(err)}</p>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn" id="rpBack">← ${t('cancel')}</button>
+        <button class="btn primary" id="rpOk">${t('continueBtn')}</button>
+      </div>`;
+    $('#rpPin').focus();
+    $('#rpBack').onclick = () => draw('choose');
+    const go = async () => {
+      const p = $('#rpPin').value.trim();
+      if (!pinOk(p)) return draw(step, t('pinShort'));
+      if (create) {
+        if (p !== $('#rpPin2').value.trim()) return draw(step, t('pinMismatch'));
+        const h = await pinHash(p);
+        Store.setSettings(s => { s.cashierPin = h; });
+        return setRole('cashier');
+      }
+      if (await pinHash(p) !== Store.settings.cashierPin) return draw(step, t('wrongPin'));
+      setRole('cashier');
+    };
+    $('#rpOk').onclick = go;
+    $$('#rolePickCard input').forEach(i => i.onkeydown = e => { if (e.key === 'Enter') go(); });
+  };
+  draw();
+  box.classList.remove('hidden');
+}
+$('#roleBtn').onclick = () => openRolePicker(false);
+
 // ---------- start ----------
-Store.onChange(() => renderAll());
+Store.onChange(() => { applyRole(); renderAll(); });
 applyTheme();
 applyLang();
+applyRole();
 renderAll();
+if (!LOCAL.role) openRolePicker(true);
 tick();
 Sync.start();
 setTimeout(() => Excel.autoCheck(), 3000);

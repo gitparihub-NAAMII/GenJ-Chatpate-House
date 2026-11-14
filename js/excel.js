@@ -110,7 +110,7 @@ const Excel = {
 
   // Auto export: at closing time for today, and any missed earlier day with sales.
   autoCheck() {
-    if (!LOCAL.autoExcel) return;
+    if (!LOCAL.autoExcel || LOCAL.role !== 'cashier') return;   // reports are for the cashier only
     const today = dayKey();
     const days = [...new Set(Store.state.bills.map(b => b.date))].filter(d => d < today && d >= dayKey(Date.now() - 7 * 864e5));
     days.forEach(d => { if ((LOCAL.exported[d] || 0) < Store.billsOn(d).length) { this.download(d, true); toast(t('excelDone') + ' — ' + d); } });

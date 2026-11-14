@@ -1,5 +1,5 @@
 // Service worker: caches the app so it opens and works with no internet.
-const CACHE = 'genj-v6';
+const CACHE = 'genj-v7';
 const ASSETS = [
   './', 'index.html', 'customer.html', 'manifest.json', 'css/style.css',
   'js/i18n.js', 'js/store.js', 'js/sync.js', 'js/excel.js', 'js/requests.js', 'js/customer.js', 'js/app.js',

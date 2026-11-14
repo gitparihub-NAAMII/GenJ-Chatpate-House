@@ -65,6 +65,7 @@ const Sync = {
 
     this.unsubs.push(r.collection('meta').doc('settings').onSnapshot({ includeMetadataChanges: true }, snap => {
       meta(snap);
+      if (!snap.metadata.fromCache) this.gotServerSettings = true;
       if (snap.exists) Store.applyRemoteSettings(snap.data());
       else this.pushSettings(Store.settings);
     }));
